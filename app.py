@@ -6,17 +6,12 @@ from dotenv import load_dotenv
 from datetime import datetime
 
 # Load environment variables
-load_dotenv()
+load_dotenv('hold.env')
 
 app = Flask(__name__)
 
 # Secret Key Handling
-secret_key = os.getenv("FLASK_SECRET_KEY")
-if not secret_key:
-    print("ERROR: FLASK_SECRET_KEY is not set. Using a default key for testing.")
-    secret_key = "super_secret_key"
-
-app.secret_key = secret_key
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "super_secret_key")
 
 # OAuth Configuration
 oauth = OAuth(app)
@@ -60,6 +55,7 @@ def canvas_auth():
         return redirect('/sync')
     except Exception as e:
         flash(f"Canvas login failed: {str(e)}", "error")
+        print(f"Canvas OAuth Error: {e}")
         return redirect('/')
 
 @app.route('/login/google')
@@ -76,6 +72,7 @@ def google_auth():
         return redirect('/sync')
     except Exception as e:
         flash(f"Google login failed: {str(e)}", "error")
+        print(f"Google OAuth Error: {e}")
         return redirect('/')
 
 @app.route('/sync')
@@ -100,63 +97,25 @@ def sync_assignments():
 
         # Sync to Google Calendar
         for assignment in assignments:
-            event = {
-                'summary': assignment['name'],
-                'description': assignment.get('description', ''),
-                'start': {'dateTime': assignment['due_at'], 'timeZone': 'America/New_York'},
-                'end': {'dateTime': assignment['due_at'], 'timeZone': 'America/New_York'}
-            }
-            google_headers = {'Authorization': f"Bearer {google_token['access_token']}"}
-            requests.post('https://www.googleapis.com/calendar/v3/calendars/primary/events', json=event, headers=google_headers)
+            try:
+                event = {
+                    'summary': assignment['name'],
+                    'description': assignment.get('description', ''),
+                    'start': {'dateTime': assignment['due_at'], 'timeZone': 'America/New_York'},
+                    'end': {'dateTime': assignment['due_at'], 'timeZone': 'America/New_York'}
+                }
+                google_headers = {'Authorization': f"Bearer {google_token['access_token']}"}
+                requests.post('https://www.googleapis.com/calendar/v3/calendars/primary/events', json=event, headers=google_headers)
+
+            except Exception as e:
+                print(f"Error syncing to Google Calendar: {e}")
 
         return render_template('sync.html', assignments=assignments)
 
     except Exception as e:
         flash(f"Error syncing assignments: {str(e)}", "error")
+        print(f"Assignment Sync Error: {e}")
         return redirect('/')
 
 if __name__ == '__main__':
-    if not os.path.exists('templates'):
-        os.makedirs('templates')
-
-    # Create index.html
-    with open('templates/index.html', 'w') as index_file:
-        index_file.write('''
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>GradeSync - Home</title>
-        </head>
-        <body>
-            <h1>Welcome to GradeSync</h1>
-            <p>Sync your Canvas assignments with Google Calendar</p>
-            <a href="/login/canvas">Login with Canvas</a><br>
-            <a href="/login/google">Login with Google</a>
-        </body>
-        </html>
-        ''')
-
-    # Create sync.html
-    with open('templates/sync.html', 'w') as sync_file:
-        sync_file.write('''
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>GradeSync - Sync Assignments</title>
-        </head>
-        <body>
-            <h1>Assignments Synced</h1>
-            <ul>
-            {% for assignment in assignments %}
-                <li>
-                    <strong>{{ assignment.name }}</strong><br>
-                    Due: {{ assignment.due_at }}<br>
-                    <a href="{{ assignment.html_url }}" target="_blank">View on Canvas</a>
-                </li>
-            {% endfor %}
-            </ul>
-        </body>
-        </html>
-        ''')
-
     app.run(debug=True)
