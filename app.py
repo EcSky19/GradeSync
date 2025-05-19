@@ -90,4 +90,47 @@ def sync_assignments():
     return render_template('sync.html', assignments=assignments)
 
 if __name__ == '__main__':
+    if not os.path.exists('templates'):
+        os.makedirs('templates')
+
+    # Create index.html
+    with open('templates/index.html', 'w') as index_file:
+        index_file.write('''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>GradeSync - Home</title>
+        </head>
+        <body>
+            <h1>Welcome to GradeSync</h1>
+            <p>Sync your Cornell Canvas assignments with Google Calendar</p>
+            <a href="/login/canvas">Login with Canvas</a><br>
+            <a href="/login/google">Login with Google</a>
+        </body>
+        </html>
+        ''')
+
+    # Create sync.html
+    with open('templates/sync.html', 'w') as sync_file:
+        sync_file.write('''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>GradeSync - Sync Assignments</title>
+        </head>
+        <body>
+            <h1>Assignments Synced</h1>
+            <ul>
+            {% for assignment in assignments %}
+                <li>
+                    <strong>{{ assignment.name }}</strong><br>
+                    Due: {{ assignment.due_at }}<br>
+                    <a href="{{ assignment.html_url }}" target="_blank">View on Canvas</a>
+                </li>
+            {% endfor %}
+            </ul>
+        </body>
+        </html>
+        ''')
+
     app.run(debug=True)
