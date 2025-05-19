@@ -3,6 +3,11 @@ import requests
 from flask import Flask, redirect, url_for, session, request, jsonify, render_template
 from authlib.integrations.flask_client import OAuth
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
